@@ -1,0 +1,3 @@
+headers = hacks.h
+headerFilter = hacks.h
+package = klibx.internal.hacks

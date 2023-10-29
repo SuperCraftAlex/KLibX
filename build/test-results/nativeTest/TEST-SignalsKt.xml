@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="SignalsKt" tests="2" skipped="0" failures="0" errors="0" timestamp="2023-10-29T10:02:58" hostname="DESKTOP-M7GNDA2" time="0.001">
+  <properties/>
+  <testcase name="testS2[native]" classname="SignalsKt" time="0.001"/>
+  <testcase name="testS3[native]" classname="SignalsKt" time="0.0"/>
+  <system-out><![CDATA[caught exception: kotlin.RuntimeException: Process terminated by signal SIGINT!
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
