@@ -1,4 +1,0 @@
-Qcaught exception: kotlin.RuntimeException: Process terminated by signal SIGINT!
-Thread created: Thread[]
-Hello from thread
-Done!
