@@ -1,5 +1,7 @@
 package klibx.io.exception
 
+import klibx.exception.ClosedException
+
 class FileOpeningException:
     Exception("File could not be opened!")
 
@@ -10,4 +12,10 @@ class InvalidModeException:
     Exception("Invalid file mode!")
 
 class FileClosedException:
-    Exception("File is already closed!")
+    ClosedException("File is already closed!")
+
+class EndOfFileException:
+    Exception("End of file reached!")
+
+class FileDeleteException:
+    Exception("Could not delete file!")

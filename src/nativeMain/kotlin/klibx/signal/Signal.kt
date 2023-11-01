@@ -1,8 +1,10 @@
 package klibx.signal
 
+import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.staticCFunction
 import kotlin.system.exitProcess
 
+@OptIn(ExperimentalForeignApi::class)
 class Signal(
     val signal: Int,
     val name: String

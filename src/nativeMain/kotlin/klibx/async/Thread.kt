@@ -1,13 +1,15 @@
 package klibx.async
 
 import klibx.async.exception.*
+import klibx.exception.NotSupportedException
 import klibx.signal.Signal
 import kotlinx.cinterop.*
 import platform.posix.*
 import kotlin.native.internal.NativePtr
-import klibx.internal.hacks.klibx_pthread_getattr_np
+import klibx.internal.hacks.*
 import kotlinx.cinterop.nativeHeap.alloc
 
+@OptIn(ExperimentalForeignApi::class)
 open class Thread(
     internal var p: pthread_t? = null,
     private var pidReal: Int? = null
@@ -21,7 +23,11 @@ open class Thread(
                 throw ThreadInvalidException("Thread does not exist")
             }
             val buff = ByteArray(1024)
-            if (pthread_getname_np(p!!, buff.refTo(0), 1024) != 0) {
+            val res = klibx_pthread_getname_np(p!!, buff.refTo(0), 1024u)
+            if (res == FEATURE_NOT_SUPPORTED) {
+                throw NotSupportedException("pthread_getname_np")
+            }
+            if (res != 0) {
                 throw ThreadException("Thread name get failed")
             }
             return buff.toKString()
@@ -30,7 +36,11 @@ open class Thread(
             if (p == null) {
                 throw ThreadInvalidException("Thread does not exist")
             }
-            if (pthread_setname_np(p!!, value) != 0) {
+            val res = klibx_pthread_setname_np(p!!, value)
+            if (res == FEATURE_NOT_SUPPORTED) {
+                throw NotSupportedException("pthread_setname_np")
+            }
+            if (res != 0) {
                 throw ThreadException("Thread name set failed")
             }
         }
@@ -41,7 +51,11 @@ open class Thread(
                 throw ThreadInvalidException("Thread does not exist")
             }
             val attr = alloc(sizeOf<pthread_attr_t>(), 0).reinterpret<pthread_attr_t>()
-            if (klibx_pthread_getattr_np(p!!, attr.ptr) != 0) {
+            val res = klibx_pthread_getattr_np(p!!, attr.ptr)
+            if (res == FEATURE_NOT_SUPPORTED) {
+                throw NotSupportedException("pthread_getattr_np")
+            }
+            if (res != 0) {
                 throw ThreadException("Thread attributes get failed")
             }
             return ThreadAttributes(attr, null)
@@ -99,10 +113,10 @@ open class Thread(
             code: (Any?) -> Any?,
         ): Thread {
             funs += StableRef.create(code)
-            val fr = staticCFunction { arg: COpaquePointer? ->
+            val fr = staticCFunction { ar: COpaquePointer? ->
                 pids += getpid()
                 val f2 = funs.last().get()
-                val arg2 = arg?.asStableRef<Any>()?.get()
+                val arg2 = ar?.asStableRef<Any>()?.get()
                 val r = f2(arg2)
                 funs.last().dispose()
                 funs.dropLast(1)

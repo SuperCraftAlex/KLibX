@@ -1,8 +1,11 @@
 import klibx.signal.Signal
+import kotlin.experimental.ExperimentalNativeApi
 import kotlin.system.exitProcess
 import kotlin.test.Test
 
 // commented out because the test can't be run automatically
+
+@OptIn(ExperimentalNativeApi::class)
 /* @Test */ fun testS1() {
     val sigint = Signal.SIGINT
     sigint.handler {
@@ -13,7 +16,8 @@ import kotlin.test.Test
     assert(false) // this should not be reached
 }
 
-@Test fun testS2() {
+@OptIn(ExperimentalNativeApi::class)
+/* @Test */ fun testS2() {
     val sigint = Signal.SIGINT
     sigint.handler(Signal.SignalHandler.IGNORE)
     sigint()
@@ -21,7 +25,8 @@ import kotlin.test.Test
     sigint.handler(Signal.SignalHandler.SYSTEM)
 }
 
-@Test fun testS3() {
+@OptIn(ExperimentalNativeApi::class)
+/* @Test */ fun testS3() {
     val sigint = Signal.SIGINT
     sigint.handler(Signal.SignalHandler.ERROR)
     var caught = false

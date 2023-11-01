@@ -1,10 +1,13 @@
 package klibx.async
 
 import klibx.async.exception.ThreadAttributesImmutableException
+import klibx.internal.hacks.klibx_pthread_get_sched_priority
+import klibx.internal.hacks.klibx_pthread_set_sched_priority
 import kotlinx.cinterop.*
 import kotlinx.cinterop.nativeHeap.alloc
 import platform.posix.*
 
+@OptIn(ExperimentalForeignApi::class)
 class ThreadAttributes internal constructor(
     internal var attr: pthread_attr_t,
     internal var updateCallback: ((pthread_attr_t) -> Unit)?
@@ -43,25 +46,12 @@ class ThreadAttributes internal constructor(
         }
 
     var priority: Int
-        get() {
-            memScoped {
-                val param = alloc<sched_param>()
-                if (pthread_attr_getschedparam(attr.ptr, param.ptr) != 0) {
-                    throw RuntimeException("ThreadAttributes: pthread_attr_getschedparam failed")
-                }
-                return param.sched_priority
-            }
-        }
+        get() =
+            klibx_pthread_get_sched_priority(attr.ptr)
         set(v) {
-            memScoped {
-                val param = alloc<sched_param>()
-                param.sched_priority = v
-                if (pthread_attr_setschedparam(attr.ptr, param.ptr) != 0) {
-                    throw RuntimeException("ThreadAttributes: pthread_attr_setschedparam failed")
-                }
-                updateCallback?.invoke(attr)
-                    ?: throw ThreadAttributesImmutableException()
-            }
+            klibx_pthread_set_sched_priority(attr.ptr, v)
+            updateCallback?.invoke(attr)
+                ?: throw ThreadAttributesImmutableException()
         }
 
     /**

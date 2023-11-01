@@ -1,6 +1,7 @@
 package klibx.async
 
 import klibx.async.exception.ThreadInvalidException
+import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.StableRef
 import platform.posix.pthread_exit
 import platform.posix.pthread_t
@@ -24,6 +25,7 @@ class CurrentThread(
      * Exits the current thread
      * @param v exit value
      */
+    @OptIn(ExperimentalForeignApi::class)
     fun exit(v: Any? = null) {
         if (p == null) {
             throw ThreadInvalidException("Thread does not exist")

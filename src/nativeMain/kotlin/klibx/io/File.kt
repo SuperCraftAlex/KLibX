@@ -1,22 +1,52 @@
 package klibx.io
 
-import klibx.io.exception.FileClosedException
-import klibx.io.exception.FileModeNotChangeableException
-import klibx.io.exception.FileOpeningException
-import klibx.io.exception.InvalidModeException
-import kotlinx.cinterop.ByteVar
-import kotlinx.cinterop.CPointer
-import kotlinx.cinterop.CValuesRef
-import kotlinx.cinterop.refTo
+import klibx.io.exception.*
+import klibx.stream.MutableStringStream
+import klibx.stream.StringStream
+import klibx.stream.impl.file.MutableFileStream
+import klibx.stream.impl.file.ReadableFileStream
+import kotlinx.cinterop.*
 import platform.posix.*
 
-@OptIn(ExperimentalStdlibApi::class)
+@OptIn(ExperimentalStdlibApi::class, ExperimentalForeignApi::class)
 class File(
     var fp: CPointer<FILE>?,
     val path: String,
     modeIn: Mode? = null,
     val modeChangeable: Boolean = true
 ): AutoCloseable {
+
+    fun reopen() {
+        if (!closed)
+            return
+
+        fp = fopen(path, mode?.value ?: throw InvalidModeException())
+    }
+
+    fun delete() {
+        close()
+        if (!exists())
+            return
+        if (remove(path) != 0)
+            throw FileDeleteException()
+    }
+
+    fun reader(): StringStream =
+        StringStream.of(ReadableFileStream(this.clone()))
+
+    fun writer(): MutableStringStream =
+        MutableStringStream.of(MutableFileStream(this.clone().also {
+            it.mode = Mode.READ_WRITE
+            it.rewind()
+        }))
+
+    fun appender(): MutableStringStream =
+        MutableStringStream.of(MutableFileStream(this.clone().also {
+            it.mode = Mode.APPEND_READ
+        }))
+
+    internal fun clone(): File =
+        File(fp, path, mode, modeChangeable)
 
     enum class Mode(
         val value: String,
@@ -133,7 +163,7 @@ class File(
         mode = Mode.APPEND
     }
 
-    fun sizeBytes(): Int {
+    fun sizeBytes(): Long {
         readingMode()
 
         fseek(fp, 0, SEEK_END)
@@ -142,46 +172,82 @@ class File(
         return size
     }
 
+    internal fun readByteSeq(): Byte {
+        readingMode()
+
+        val byte = fgetc(fp)
+        if (byte == EOF) {
+            throw EndOfFileException()
+        }
+        return byte.toByte()
+    }
+
+    internal fun readBytesSeq(target: CValuesRef<ByteVar>, size: Int) {
+        readingMode()
+
+        if (fread(target, size.toULong(), 1u, fp) != size.toULong()) {
+            throw EndOfFileException()
+        }
+    }
+
+    internal fun rewind() {
+        rewind(fp)
+    }
+
     fun readBytes(target: CValuesRef<ByteVar>, size: Int) {
         readingMode()
 
-        fread(target, size.toULong(), 1, fp)
+        rewind()
+
+        readBytesSeq(target, size)
     }
 
     fun readBytes(): ByteArray {
-        val size = sizeBytes()
+        val size = sizeBytes().toInt()
         val buffer = ByteArray(size)
         readBytes(buffer.refTo(0), size)
         return buffer
     }
 
     fun read(): String {
-        val size = sizeBytes()
+        val size = sizeBytes().toInt()
         val buffer = ByteArray(size)
         readBytes(buffer.refTo(0), size)
         return buffer
-            .dropLastWhile { it.toInt() == EOF }
-            .toByteArray()
             .decodeToString()
     }
 
     fun writeBytes(bytes: ByteArray) {
         writingMode()
 
-        fwrite(bytes.refTo(0), bytes.size.toULong(), 1, fp)
+        rewind()
+        fwrite(bytes.refTo(0), bytes.size.toULong(), 1u, fp)
     }
 
     fun write(str: String) =
         writeBytes(str.encodeToByteArray())
 
     fun create() {
+        reopen()
         writingCreatingMode()
     }
 
-    fun appendBytes(bytes: ByteArray) {
+    fun appendBytes(bytes: ByteArray, offset: Int = 0, length: Int = bytes.size) {
         appendingMode()
 
-        fwrite(bytes.refTo(0), bytes.size.toULong(), 1, fp)
+        fwrite(bytes.refTo(offset), length.toULong(), 1u, fp)
+    }
+
+    fun appendBytes(bytes: CPointer<ByteVar>, offset: Int = 0, length: Int) {
+        appendingMode()
+
+        fwrite(bytes + offset, length.toULong(), 1u, fp)
+    }
+
+    fun appendByte(byte: Byte) {
+        appendingMode()
+
+        fputc(byte.toInt(), fp)
     }
 
     fun append(str: String) =

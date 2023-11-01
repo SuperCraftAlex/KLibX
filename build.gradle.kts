@@ -1,5 +1,5 @@
 plugins {
-    kotlin("multiplatform") version "1.8.21"
+    kotlin("multiplatform") version "1.9.10"
 }
 
 group = "org.example"
@@ -28,8 +28,10 @@ kotlin {
                 }
             }
         }
+        binaries {
+            executable()
+        }
     }
-
     
     sourceSets {
         val nativeMain by getting
